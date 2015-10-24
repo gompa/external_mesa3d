@@ -779,6 +779,8 @@ static const __DRIimageLoaderExtension droid_image_loader_extension = {
    .flushFrontBuffer    = droid_flush_front_buffer,
 };
 
+#define DRM_NODE_RENDER 1
+
 EGLBoolean
 dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 {
