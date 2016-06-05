@@ -2543,7 +2543,7 @@ st_finalize_texture(struct gl_context *ctx,
 
             if (level == 0 ||
                 (stImage->base.Width == u_minify(stObj->width0, level) &&
-                 stImage->base.Height == height &&
+                 stImage->base.Height == u_minify(stObj->height0, level) &&
                  stImage->base.Depth == depth)) {
                /* src image fits expected dest mipmap level size */
                copy_image_data_to_texture(st, stObj, level, stImage);

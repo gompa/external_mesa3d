@@ -320,7 +320,7 @@ scan_declaration(struct tgsi_shader_info *info,
          info->input_cylindrical_wrap[reg] = (ubyte)fulldecl->Interp.CylindricalWrap;
 
          /* Vertex shaders can have inputs with holes between them. */
-         if (info->processor == PIPE_SHADER_VERTEX)
+         if (info->processor == TGSI_PROCESSOR_VERTEX)
             info->num_inputs = MAX2(info->num_inputs, reg + 1);
          else {
             info->num_inputs++;

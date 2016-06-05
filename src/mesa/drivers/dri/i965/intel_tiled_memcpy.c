@@ -58,40 +58,24 @@ static const uint32_t ytile_width = 128;
 static const uint32_t ytile_height = 32;
 static const uint32_t ytile_span = 16;
 
-static inline uint32_t
-ror(uint32_t n, uint32_t d)
-{
-   return (n >> d) | (n << (32 - d));
-}
-
-static inline uint32_t
-bswap32(uint32_t n)
-{
-#if defined(HAVE___BUILTIN_BSWAP32)
-   return __builtin_bswap32(n);
-#else
-   return (n >> 24) |
-          ((n >> 8) & 0x0000ff00) |
-          ((n << 8) & 0x00ff0000) |
-          (n << 24);
-#endif
-}
-
 /**
  * Copy RGBA to BGRA - swap R and B.
  */
 static inline void *
 rgba8_copy(void *dst, const void *src, size_t bytes)
 {
-   uint32_t *d = dst;
-   uint32_t const *s = src;
+   uint8_t *d = dst;
+   uint8_t const *s = src;
 
    assert(bytes % 4 == 0);
 
    while (bytes >= 4) {
-      *d = ror(bswap32(*s), 8);
-      d += 1;
-      s += 1;
+      d[0] = s[2];
+      d[1] = s[1];
+      d[2] = s[0];
+      d[3] = s[3];
+      d += 4;
+      s += 4;
       bytes -= 4;
    }
    return dst;
@@ -100,57 +84,6 @@ rgba8_copy(void *dst, const void *src, size_t bytes)
 #ifdef __SSSE3__
 static const uint8_t rgba8_permutation[16] =
    { 2,1,0,3, 6,5,4,7, 10,9,8,11, 14,13,12,15 };
-
-static inline void
-rgba8_copy_16_aligned_dst(void *dst, const void *src)
-{
-   _mm_store_si128(dst,
-                   _mm_shuffle_epi8(_mm_loadu_si128(src),
-                                    *(__m128i *)rgba8_permutation));
-}
-
-static inline void
-rgba8_copy_16_aligned_src(void *dst, const void *src)
-{
-   _mm_storeu_si128(dst,
-                    _mm_shuffle_epi8(_mm_load_si128(src),
-                                     *(__m128i *)rgba8_permutation));
-}
-
-#elif defined(__SSE2__)
-static inline void
-rgba8_copy_16_aligned_dst(void *dst, const void *src)
-{
-   __m128i srcreg, dstreg, agmask, ag, rb, br;
-
-   agmask = _mm_set1_epi32(0xFF00FF00);
-   srcreg = _mm_loadu_si128((__m128i *)src);
-
-   rb = _mm_andnot_si128(agmask, srcreg);
-   ag = _mm_and_si128(agmask, srcreg);
-   br = _mm_shufflehi_epi16(_mm_shufflelo_epi16(rb, _MM_SHUFFLE(2, 3, 0, 1)),
-                            _MM_SHUFFLE(2, 3, 0, 1));
-   dstreg = _mm_or_si128(ag, br);
-
-   _mm_store_si128((__m128i *)dst, dstreg);
-}
-
-static inline void
-rgba8_copy_16_aligned_src(void *dst, const void *src)
-{
-   __m128i srcreg, dstreg, agmask, ag, rb, br;
-
-   agmask = _mm_set1_epi32(0xFF00FF00);
-   srcreg = _mm_load_si128((__m128i *)src);
-
-   rb = _mm_andnot_si128(agmask, srcreg);
-   ag = _mm_and_si128(agmask, srcreg);
-   br = _mm_shufflehi_epi16(_mm_shufflelo_epi16(rb, _MM_SHUFFLE(2, 3, 0, 1)),
-                            _MM_SHUFFLE(2, 3, 0, 1));
-   dstreg = _mm_or_si128(ag, br);
-
-   _mm_storeu_si128((__m128i *)dst, dstreg);
-}
 #endif
 
 /**
@@ -159,26 +92,23 @@ rgba8_copy_16_aligned_src(void *dst, const void *src)
 static inline void *
 rgba8_copy_aligned_dst(void *dst, const void *src, size_t bytes)
 {
+   uint8_t *d = dst;
+   uint8_t const *s = src;
+
    assert(bytes == 0 || !(((uintptr_t)dst) & 0xf));
 
-#if defined(__SSSE3__) || defined(__SSE2__)
-   if (bytes == 64) {
-      rgba8_copy_16_aligned_dst(dst +  0, src +  0);
-      rgba8_copy_16_aligned_dst(dst + 16, src + 16);
-      rgba8_copy_16_aligned_dst(dst + 32, src + 32);
-      rgba8_copy_16_aligned_dst(dst + 48, src + 48);
-      return dst;
-   }
-
+#ifdef __SSSE3__
    while (bytes >= 16) {
-      rgba8_copy_16_aligned_dst(dst, src);
-      src += 16;
-      dst += 16;
+      _mm_store_si128((__m128i *)d,
+                      _mm_shuffle_epi8(_mm_loadu_si128((__m128i *)s),
+                                       *(__m128i *) rgba8_permutation));
+      s += 16;
+      d += 16;
       bytes -= 16;
    }
 #endif
 
-   rgba8_copy(dst, src, bytes);
+   rgba8_copy(d, s, bytes);
 
    return dst;
 }
@@ -189,26 +119,23 @@ rgba8_copy_aligned_dst(void *dst, const void *src, size_t bytes)
 static inline void *
 rgba8_copy_aligned_src(void *dst, const void *src, size_t bytes)
 {
+   uint8_t *d = dst;
+   uint8_t const *s = src;
+
    assert(bytes == 0 || !(((uintptr_t)src) & 0xf));
 
-#if defined(__SSSE3__) || defined(__SSE2__)
-   if (bytes == 64) {
-      rgba8_copy_16_aligned_src(dst +  0, src +  0);
-      rgba8_copy_16_aligned_src(dst + 16, src + 16);
-      rgba8_copy_16_aligned_src(dst + 32, src + 32);
-      rgba8_copy_16_aligned_src(dst + 48, src + 48);
-      return dst;
-   }
-
+#ifdef __SSSE3__
    while (bytes >= 16) {
-      rgba8_copy_16_aligned_src(dst, src);
-      src += 16;
-      dst += 16;
+      _mm_storeu_si128((__m128i *)d,
+                       _mm_shuffle_epi8(_mm_load_si128((__m128i *)s),
+                                        *(__m128i *) rgba8_permutation));
+      s += 16;
+      d += 16;
       bytes -= 16;
    }
 #endif
 
-   rgba8_copy(dst, src, bytes);
+   rgba8_copy(d, s, bytes);
 
    return dst;
 }
@@ -820,7 +747,8 @@ tiled_to_linear(uint32_t xt1, uint32_t xt2,
  * \return true if the format and type combination are valid
  */
 bool intel_get_memcpy(mesa_format tiledFormat, GLenum format,
-                      GLenum type, mem_copy_fn *mem_copy, uint32_t *cpp)
+                      GLenum type, mem_copy_fn *mem_copy, uint32_t *cpp,
+                      enum intel_memcpy_direction direction)
 {
    if (type == GL_UNSIGNED_INT_8_8_8_8_REV &&
        !(format == GL_RGBA || format == GL_BGRA))

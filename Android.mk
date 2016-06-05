@@ -92,6 +92,7 @@ SUBDIRS := \
 	src/loader \
 	src/mapi \
 	src/compiler \
+	src/compiler/glsl \
 	src/mesa \
 	src/util \
 	src/egl \
@@ -102,9 +103,9 @@ SUBDIRS := \
 INC_DIRS := $(call all-named-subdir-makefiles,$(SUBDIRS))
 
 ifeq ($(strip $(MESA_BUILD_GALLIUM)),true)
-INC_DIRS += $(call all-named-subdir-makefiles,src/gallium)
+SUBDIRS += src/gallium
 endif
 
-include $(INC_DIRS)
+include $(call all-named-subdir-makefiles,$(SUBDIRS))
 
 endif

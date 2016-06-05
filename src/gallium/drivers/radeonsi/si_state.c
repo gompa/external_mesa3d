@@ -2929,9 +2929,46 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	    state->target == PIPE_TEXTURE_CUBE)
 		last_layer = state->u.tex.first_layer;
 
-	/* Texturing with separate depth and stencil. */
-	pipe_format = state->format;
-	surflevel = tmp->surface.level;
+	va = tmp->resource.gpu_address + surflevel[base_level].offset;
+
+	view->state[0] = va >> 8;
+	view->state[1] = (S_008F14_BASE_ADDRESS_HI(va >> 40) |
+			  S_008F14_DATA_FORMAT(format) |
+			  S_008F14_NUM_FORMAT(num_format));
+	view->state[2] = (S_008F18_WIDTH(width - 1) |
+			  S_008F18_HEIGHT(height - 1));
+	view->state[3] = (S_008F1C_DST_SEL_X(si_map_swizzle(swizzle[0])) |
+			  S_008F1C_DST_SEL_Y(si_map_swizzle(swizzle[1])) |
+			  S_008F1C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
+			  S_008F1C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
+			  S_008F1C_BASE_LEVEL(texture->nr_samples > 1 ?
+						      0 : first_level) |
+			  S_008F1C_LAST_LEVEL(texture->nr_samples > 1 ?
+						      util_logbase2(texture->nr_samples) :
+						      last_level) |
+			  S_008F1C_TILING_INDEX(si_tile_mode_index(tmp, base_level, false)) |
+			  S_008F1C_POW2_PAD(texture->last_level > 0) |
+			  S_008F1C_TYPE(si_tex_dim(texture->target, state->target,
+						   texture->nr_samples)));
+	view->state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
+	view->state[5] = (S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
+			  S_008F24_LAST_ARRAY(last_layer));
+
+	if (tmp->dcc_buffer) {
+		uint64_t dcc_offset = surflevel[base_level].dcc_offset;
+		unsigned swap = r600_translate_colorswap(pipe_format, FALSE);
+
+		view->state[6] = S_008F28_COMPRESSION_EN(1) | S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
+		view->state[7] = (tmp->dcc_buffer->gpu_address + dcc_offset) >> 8;
+		view->dcc_buffer = tmp->dcc_buffer;
+	} else {
+		view->state[6] = 0;
+		view->state[7] = 0;
+	}
+
+	/* Initialize the sampler view for FMASK. */
+	if (tmp->fmask.size) {
+		uint64_t va = tmp->resource.gpu_address + tmp->fmask.offset;
 
 	if (tmp->is_depth && !tmp->is_flushing_texture) {
 		switch (pipe_format) {

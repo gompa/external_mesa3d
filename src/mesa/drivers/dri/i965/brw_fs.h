@@ -374,7 +374,7 @@ public:
    unsigned grf_used;
    bool spilled_any_registers;
 
-   const unsigned dispatch_width; /**< 8, 16 or 32 */
+   const unsigned dispatch_width; /**< 8 or 16 */
    unsigned min_dispatch_width;
    unsigned max_dispatch_width;
 

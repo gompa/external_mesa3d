@@ -327,12 +327,13 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 			usage |= PIPE_TRANSFER_DISCARD_RANGE;
 		}
 	}
-
-	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-	    !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
-		       PIPE_TRANSFER_PERSISTENT)) &&
-	    !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
-	    r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
+		}
+	}
+	else if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
+		 !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
+			    PIPE_TRANSFER_PERSISTENT)) &&
+		 !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
+		 r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
 		/* Check if mapping this buffer would cause waiting for the GPU. */
@@ -359,7 +360,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	else if ((usage & PIPE_TRANSFER_READ) &&
 		 !(usage & (PIPE_TRANSFER_WRITE |
 			    PIPE_TRANSFER_PERSISTENT)) &&
-		 rbuffer->domains & RADEON_DOMAIN_VRAM &&
+		 rbuffer->domains == RADEON_DOMAIN_VRAM &&
 		 r600_can_dma_copy_buffer(rctx, 0, box->x, box->width)) {
 		struct r600_resource *staging;
 

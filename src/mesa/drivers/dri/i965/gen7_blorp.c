@@ -65,7 +65,7 @@ gen7_blorp_emit_urb_config(struct brw_context *brw)
    const unsigned push_constant_bytes = 1024 * urb_size;
    const unsigned push_constant_chunks =
       push_constant_bytes / chunk_size_bytes;
-   const unsigned vs_size = 1;
+   const unsigned vs_size = 2;
    const unsigned vs_start = push_constant_chunks;
    const unsigned vs_chunks =
       DIV_ROUND_UP(brw->urb.min_vs_entries * vs_size * 64, chunk_size_bytes);

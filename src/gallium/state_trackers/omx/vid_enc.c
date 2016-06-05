@@ -180,6 +180,11 @@ static OMX_ERRORTYPE vid_enc_Constructor(OMX_COMPONENTTYPE *comp, OMX_STRING nam
                                 PIPE_VIDEO_ENTRYPOINT_ENCODE, PIPE_VIDEO_CAP_SUPPORTED))
       return OMX_ErrorBadParameter;
 
+   priv->stacked_frames_num = screen->get_video_param(screen,
+                                PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH,
+                                PIPE_VIDEO_ENTRYPOINT_ENCODE,
+                                PIPE_VIDEO_CAP_STACKED_FRAMES);
+
    priv->s_pipe = screen->context_create(screen, priv->screen, 0);
    if (!priv->s_pipe)
       return OMX_ErrorInsufficientResources;

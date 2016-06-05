@@ -400,6 +400,24 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                mask = writemask_for_backwards_vector(mask);
             }
          }
+      } else if (imm_offset == 1 && indirect_offset.file == BAD_FILE) {
+         value.type = BRW_REGISTER_TYPE_F;
+
+         mask &= (1 << tesslevel_outer_components(key->tes_primitive_mode)) - 1;
+
+         /* This is a write to gl_TessLevelOuter[] which lives in the
+          * Patch URB Header at DWords 4-7.  However, it's reversed, so
+          * instead of .xyzw we have .wzyx.
+          */
+         if (key->tes_primitive_mode == GL_ISOLINES) {
+            /* Isolines .xy should be stored in .zw, in order. */
+            swiz = BRW_SWIZZLE4(0, 0, 0, 1);
+            mask <<= 2;
+         } else {
+            /* Other domains are reversed; store .wzyx instead of .xyzw. */
+            swiz = BRW_SWIZZLE_WZYX;
+            mask = writemask_for_backwards_vector(mask);
+         }
       }
 
       emit_urb_write(swizzle(value, swiz), mask,

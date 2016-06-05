@@ -37,4 +37,7 @@ LOCAL_C_INCLUDES += \
 	external/elfutils/$(if $(filter true,$(MESA_LOLLIPOP_BUILD)),0.153/)libelf
 endif
 
+LOCAL_CFLAGS += -munaligned-access -DHAVE_FUNC_ATTRIBUTE_PACKED
+MESA_DRI_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/dri
+
 include $(MESA_COMMON_MK)

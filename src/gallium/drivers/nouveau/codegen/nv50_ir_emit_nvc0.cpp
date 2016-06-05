@@ -1874,31 +1874,14 @@ CodeEmitterNVC0::emitLOAD(const Instruction *i)
    }
    code[1] = opc;
 
-   int r = 0, p = -1;
    if (i->src(0).getFile() == FILE_MEMORY_SHARED) {
       if (i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
-         if (i->def(0).getFile() == FILE_PREDICATE) { // p, #
-            r = -1;
-            p = 0;
-         } else if (i->defExists(1)) { // r, p
-            p = 1;
-         } else {
-            assert(!"Expected predicate dest for load locked");
-         }
+         assert(i->defExists(1));
+         defId(i->def(1), 32 + 18);
       }
    }
 
-   if (r >= 0)
-      defId(i->def(r), 14);
-   else
-      code[0] |= 63 << 14;
-
-   if (p >= 0) {
-      if (targ->getChipset() >= NVISA_GK104_CHIPSET)
-         defId(i->def(p), 8);
-      else
-         defId(i->def(p), 32 + 18);
-   }
+   defId(i->def(0), 14);
 
    setAddressByFile(i->src(0));
    srcId(i->src(0).getIndirect(0), 20);
